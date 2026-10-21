@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: Amnesia Book Studio API
+  version: 0.1.0
+  description: Czech-first API for managing book projects from manuscript to print.
+servers:
+  - url: https://YOUR-PUBLIC-HTTPS-HOST
+security:
+  - ApiKeyAuth: []
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  schemas:
+    BookCreate:
+      type: object
+      required: [title, author]
+      properties:
+        title: {type: string, description: "Název knihy"}
+        author: {type: string, description: "Autor"}
+        genre: {type: string}
+        trim_size: {type: string, default: A5}
+        binding: {type: string, default: "Pevná vazba"}
+        stage:
+          type: string
+          enum: [Idea, Manuscript, Editing, Layout, Proof, "Printer quote", "Approved for print", Printed]
+        publisher: {type: string}
+        printer: {type: string}
+        target_copies: {type: integer, minimum: 1}
+        notes: {type: string}
+    BookUpdate:
+      type: object
+      properties:
+        title: {type: string}
+        author: {type: string}
+        genre: {type: string}
+        trim_size: {type: string}
+        binding: {type: string}
+        stage:
+          type: string
+          enum: [Idea, Manuscript, Editing, Layout, Proof, "Printer quote", "Approved for print", Printed]
+        publisher: {type: string}
+        printer: {type: string}
+        target_copies: {type: integer, minimum: 1}
+        notes: {type: string}
+    ChecklistUpdate:
+      type: object
+      required: [done]
+      properties:
+        done: {type: boolean}
+        note: {type: string}
+    QuoteCreate:
+      type: object
+      required: [printer]
+      properties:
+        printer: {type: string}
+        amount_czk: {type: number, minimum: 0}
+        copies: {type: integer, minimum: 1}
+        details: {type: string}
+paths:
+  /books:
+    get:
+      operationId: listBooks
+      summary: List all book projects
+      responses:
+        "200": {description: List of book projects}
+    post:
+      operationId: createBook
+      summary: Create a book project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookCreate"}
+      responses:
+        "200": {description: Created book project}
+  /books/{book_id}:
+    parameters:
+      - in: path
+        name: book_id
+        required: true
+        schema: {type: integer}
+    get:
+      operationId: getBook
+      summary: Get a book, checklist, and printer quotes
+      responses:
+        "200": {description: Book details}
+    patch:
+      operationId: updateBook
+      summary: Update book metadata or workflow stage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/BookUpdate"}
+      responses:
+        "200": {description: Updated book}
+  /books/{book_id}/checklist:
+    get:
+      operationId: getChecklist
+      summary: Get print-readiness checklist
+      responses:
+        "200": {description: Checklist and completion percentage}
+  /books/{book_id}/checklist/{item_key}:
+    parameters:
+      - in: path
+        name: book_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: item_key
+        required: true
+        schema: {type: string}
+    patch:
+      operationId: updateChecklist
+      summary: Mark a checklist item complete or incomplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ChecklistUpdate"}
+      responses:
+        "200": {description: Updated checklist item}
+  /books/{book_id}/printer-brief:
+    get:
+      operationId: generatePrinterBrief
+      summary: Generate a structured Czech brief for a printer
+      responses:
+        "200": {description: Printer brief and checklist status}
+  /books/{book_id}/quotes:
+    post:
+      operationId: addPrinterQuote
+      summary: Record a printer quote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/QuoteCreate"}
+      responses:
+        "200": {description: Saved printer quote}
